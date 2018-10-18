@@ -7,11 +7,13 @@ import java.util.ArrayList;
 
 class Item {
     int weight, value, index;
+    StringBuilder sb;
 
-    public Item(int v, int w, int i) {
+    public Item(int v, int w, int i, StringBuilder sb) {
         this.weight = w;
         this.value = v;
         this.index = i;
+        this.sb = sb;
     }
 }
 
@@ -28,36 +30,70 @@ public class Knapsack {
             ArrayList<Item> itemList = new ArrayList<>();
             for (int i = 0; i < nrItems; i++) {
                 input = in.readLine().split(" ");
-                itemList.add(new Item(Integer.parseInt(input[0]), Integer.parseInt(input[1]), i));
+                itemList.add(new Item(Integer.parseInt(input[0]), Integer.parseInt(input[1]), i, null));
             }
-            StringBuilder s = new StringBuilder("");
-            int[][] memoize = new int[nrItems][(int) Math.ceil(capacity) + 1];
-            int output = knapsack(s, 0, memoize, itemList, capacity);
-            System.out.println(s);
-            System.out.println(output);
+
+            int[][] edgeTo = new int[nrItems + 1][(int) Math.ceil(capacity)];
+            int[][] memoize = new int[nrItems + 1][(int) Math.ceil(capacity)];
+
+            knapsack(0, memoize, itemList, capacity, edgeTo);
+            int outNR = 0;
+
+            ArrayList<Integer> indexList = findUsedItems(edgeTo, itemList);
+            for (int i = indexList.size() - 1; i >= 0; i--) {
+                System.out.print(indexList.get(i) + " ");
+            }
+
+
             inp = in.readLine();
 
         }
 
     }
 
-    private static int knapsack(StringBuilder s, int current, int[][] memoize, ArrayList<Item> itemList, double capacity) {
-        if (current == itemList.size())
-            return 0;
-
-        if (memoize[current][(int) Math.ceil(capacity)] != 0)
-            return memoize[current][(int) Math.ceil(capacity)];
-
-        if (itemList.get(current).weight > capacity) {
-            memoize[current][(int) Math.ceil(capacity)] = knapsack(s, current + 1, memoize, itemList, capacity);
-            return memoize[current][(int) Math.ceil(capacity)];
+    private static ArrayList<Integer> findUsedItems(int[][] edgeTo, ArrayList<Item> itemList) {
+        int currX = edgeTo[0].length - 1;
+        int currY = edgeTo.length - 1;
+        ArrayList<Integer> ret = new ArrayList<>();
+        int counter = 0;
+        while (currY > 0 && currX > 0) {
+            if (edgeTo[currY][currX] == 1) {
+                ret.add(currY - 1);
+                currX -= itemList.get(currY - 1).weight;
+                currY--;
+                counter++;
+            } else
+                currY--;
         }
-        memoize[current][(int) Math.ceil(capacity)] =
-                Math.max(itemList.get(current).value +
-                                knapsack(s.append("1"), current + 1, memoize, itemList, capacity - itemList.get(current).weight),
-                        knapsack(s.append("0"), current + 1, memoize, itemList, capacity));
+        System.out.println(counter);
+        return ret;
+    }
 
-        return memoize[current][(int) Math.ceil(capacity)];
+    private static int knapsack(int current, int[][] memoize, ArrayList<Item> itemList, double capacity, int[][] edgeTo) {
+        for (int i = 0; i <= itemList.size(); i++) {
+            for (int w = 0; w <= capacity; w++) {
+                if (i == 0 || w == 0)
+                    memoize[i][w] = 0;
+                else if (itemList.get(i - 1).weight <= w) {
+                    int pick = itemList.get(i - 1).value + memoize[i - 1][w - itemList.get(i - 1).weight];
+                    int dontPick = memoize[i - 1][w];
+
+                    if (pick > dontPick) {
+                        edgeTo[i][w] = 1;
+                        memoize[i][w] = pick;
+                    } else {
+                        edgeTo[i][w] = 0;
+                        memoize[i][w] = dontPick;
+                    }
+
+                } else {
+                    edgeTo[i][w] = 0;
+                    memoize[i][w] = memoize[i - 1][w];
+                }
+            }
+        }
+
+        return memoize[itemList.size()][(int) Math.floor(capacity)];
     }
 
 }
